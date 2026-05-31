@@ -1,0 +1,19 @@
+{"timestamp":"00:00:00.764","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:01:24.651","source":"Server","level":"LOG","message":"✓ Compiled in 51ms"}
+{"timestamp":"00:03:42.208","source":"Server","level":"LOG","message":"✓ Compiled in 22ms"}
+{"timestamp":"00:06:28.202","source":"Server","level":"LOG","message":"✓ Compiled in 89ms"}
+{"timestamp":"00:06:38.901","source":"Server","level":"LOG","message":"✓ Compiled in 19ms"}
+{"timestamp":"00:06:43.087","source":"Server","level":"LOG","message":"✓ Compiled in 6ms"}
+{"timestamp":"00:06:46.293","source":"Server","level":"LOG","message":"✓ Compiled in 263ms"}
+{"timestamp":"00:06:51.101","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload due to a runtime error."}
+{"timestamp":"00:06:51.110","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload due to a runtime error."}
+{"timestamp":"00:06:51.235","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload due to a runtime error."}
+{"timestamp":"00:06:51.295","source":"Browser","level":"ERROR","message":"uncaughtError: ReferenceError: Can't find variable: ReactMarkdown"}
+{"timestamp":"00:06:51.295","source":"Browser","level":"ERROR","message":"uncaughtError: ReferenceError: Can't find variable: ReactMarkdown"}
+{"timestamp":"00:06:51.295","source":"Browser","level":"ERROR","message":"uncaughtError: ReferenceError: Can't find variable: ReactMarkdown"}
+{"timestamp":"00:06:51.371","source":"Server","level":"ERROR","message":"[browser] \"\\u001b[31mUncaught ReferenceError: Can't find variable: ReactMarkdown\\u001b[39m\\n\\u001b[31m    at map ([native code])\\n    at forEach ([native code])\\u001b[39m\""}
+{"timestamp":"00:06:51.371","source":"Browser","level":"ERROR","message":"\u001b[31mUncaught ReferenceError: Can't find variable: ReactMarkdown\u001b[39m\n\u001b[31m    at map ([native code])\n    at forEach ([native code])\u001b[39m"}
+{"timestamp":"00:06:51.432","source":"Server","level":"ERROR","message":"[browser] \"\\u001b[31mUncaught ReferenceError: Can't find variable: ReactMarkdown\\u001b[39m\\n\\u001b[31m    at map ([native code])\\n    at forEach ([native code])\\u001b[39m\""}
+{"timestamp":"00:06:51.432","source":"Browser","level":"ERROR","message":"\u001b[31mUncaught ReferenceError: Can't find variable: ReactMarkdown\u001b[39m\n\u001b[31m    at map ([native code])\n    at forEach ([native code])\u001b[39m"}
+{"timestamp":"00:06:51.432","source":"Server","level":"ERROR","message":"[browser] \"\\u001b[31mUncaught ReferenceError: Can't find variable: ReactMarkdown\\u001b[39m\\n\\u001b[31m    at map ([native code])\\n    at forEach ([native code])\\u001b[39m\""}
+{"timestamp":"00:06:51.432","source":"Browser","level":"ERROR","message":"\u001b[31mUncaught ReferenceError: Can't find variable: ReactMarkdown\u001b[39m\n\u001b[31m    at map ([native code])\n    at forEach ([native code])\u001b[39m"}
