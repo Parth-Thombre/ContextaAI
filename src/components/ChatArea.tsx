@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Send, ChevronDown } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter' //Right now if the AI responds with code, it shows as plain text. These libraries (this one and the bottom one) will render code blocks with proper syntax highlighting — colors for keywords, strings, functions — exactly like ChatGPT or VS Code does it.
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import TypingIndicator from './TypingIndicator'// this will autoscroll the chat at the bottom when new msg is given.
 
 const models = [
   { id: 'gpt-4', name: 'GPT-4', color: '#10a37f' },
@@ -24,6 +25,12 @@ export default function ChatArea() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return
@@ -82,6 +89,7 @@ export default function ChatArea() {
       height: '100vh',
       backgroundColor: '#0a0a0a'
     }}>
+
       {/* Top bar */}
       <div style={{
         display: 'flex',
@@ -212,51 +220,41 @@ export default function ChatArea() {
               color: '#ffffff',
             }}>
               <ReactMarkdown
-  components={{
-    code({ node, inline, className, children, ...props }: any) {
-      const match = /language-(\w+)/.exec(className || '')
-      return !inline && match ? (
-        <SyntaxHighlighter
-          style={oneDark}
-          language={match[1]}
-          PreTag="div"
-          {...props}
-        >
-          {String(children).replace(/\n$/, '')}
-        </SyntaxHighlighter>
-      ) : (
-        <code style={{
-          backgroundColor: '#2d2d2d',
-          padding: '2px 6px',
-          borderRadius: '4px',
-          fontSize: '13px',
-          fontFamily: 'monospace'
-        }} {...props}>
-          {children}
-        </code>
-      )
-    }
-  }}
->
-  {message.content}
-</ReactMarkdown>
+                components={{
+                  code({ node, inline, className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '')
+                    return !inline && match ? (
+                      <SyntaxHighlighter
+                        style={oneDark}
+                        language={match[1]}
+                        PreTag="div"
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, '')}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code style={{
+                        backgroundColor: '#2d2d2d',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontFamily: 'monospace'
+                      }} {...props}>
+                        {children}
+                      </code>
+                    )
+                  }
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
             </div>
           </div>
         ))}
 
-        {loading && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{
-              backgroundColor: '#1a1a1a',
-              borderRadius: '18px 18px 18px 4px',
-              padding: '12px 16px',
-              color: '#888',
-              fontSize: '14px'
-            }}>
-              Thinking...
-            </div>
-          </div>
-        )}
+        {loading && <TypingIndicator />}
+        <div ref={messagesEndRef} />
+
       </div>
 
       {/* Input */}
@@ -307,6 +305,7 @@ export default function ChatArea() {
           Press Enter to send · Shift+Enter for new line
         </div>
       </div>
+
     </div>
   )
 }
