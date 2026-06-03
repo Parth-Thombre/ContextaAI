@@ -5,7 +5,7 @@ import { Send, ChevronDown } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import TypingIndicator from './TypingIndicator'// this will autoscroll the chat at the bottom when new msg is given.
+import TypingIndicator from './TypingIndicator'
 
 const models = [
   { id: 'gpt-4', name: 'GPT-4', color: '#10a37f' },
@@ -25,6 +25,7 @@ export default function ChatArea() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -33,46 +34,85 @@ export default function ChatArea() {
   }, [messages, loading])
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return
+  if (!input.trim() || loading) return
 
-    const userMessage: Message = {
-      id: Date.now(),
-      role: 'user',
-      content: input
+  const userMessage: Message = {
+    id: Date.now(),
+    role: 'user',
+    content: input
+  }
+
+  const updatedMessages = [...messages, userMessage]
+  setMessages(updatedMessages)
+  setInput('')
+  setLoading(true)
+
+  try {
+    // Get AI response
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: updatedMessages.map(m => ({
+          role: m.role,
+          content: m.content
+        }))
+      })
+    })
+
+    const data = await response.json()
+
+    const assistantMessage: Message = {
+      id: Date.now() + 1,
+      role: 'assistant',
+      content: data.message
     }
 
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setLoading(true)
+    const finalMessages = [...updatedMessages, assistantMessage]
+    setMessages(finalMessages)
 
-    try {
-      const response = await fetch('/api/chat', {
+    // Save to database
+    const title = userMessage.content.slice(0, 50)
+    const dbMessages = finalMessages.map(m => ({
+      role: m.role,
+      content: m.content
+    }))
+
+    if (!conversationId) {
+      // Create new conversation
+      const saveResponse = await fetch('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map(m => ({
-            role: m.role,
-            content: m.content
-          }))
+          title,
+          model: selectedModel.name,
+          messages: dbMessages
         })
       })
-
-      const data = await response.json()
-
-      const assistantMessage: Message = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: data.message
+      const saveData = await saveResponse.json()
+      console.log('Save response:', saveData)
+      if (saveData.conversation?.id) {
+        setConversationId(saveData.conversation.id)
       }
-
-      setMessages(prev => [...prev, assistantMessage])
-
-    } catch (error) {
-      console.error('Error:', error)
-    } finally {
-      setLoading(false)
+    } else {
+      // Update existing conversation
+      await fetch('/api/conversations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: conversationId,
+          messages: dbMessages,
+          title
+        })
+      })
     }
+
+  } catch (error) {
+    console.error('Error:', error)
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
