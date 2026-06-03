@@ -19,7 +19,12 @@ interface Message {
   content: string
 }
 
-export default function ChatArea() {
+interface ChatAreaProps {
+  selectedConversation: any
+  onConversationSaved: (id: string) => void
+}
+
+export default function ChatArea({ selectedConversation, onConversationSaved }: ChatAreaProps) {
   const [selectedModel, setSelectedModel] = useState(models[0])
   const [showModelDropdown, setShowModelDropdown] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -33,86 +38,96 @@ export default function ChatArea() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
+  useEffect(() => {
+    if (selectedConversation) {
+      setConversationId(selectedConversation.id)
+      setMessages(selectedConversation.messages.map((m: any, i: number) => ({
+        id: i,
+        role: m.role,
+        content: m.content
+      })))
+    } else {
+      setConversationId(null)
+      setMessages([])
+    }
+  }, [selectedConversation])
+
   const sendMessage = async () => {
-  if (!input.trim() || loading) return
+    if (!input.trim() || loading) return
 
-  const userMessage: Message = {
-    id: Date.now(),
-    role: 'user',
-    content: input
-  }
-
-  const updatedMessages = [...messages, userMessage]
-  setMessages(updatedMessages)
-  setInput('')
-  setLoading(true)
-
-  try {
-    // Get AI response
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: updatedMessages.map(m => ({
-          role: m.role,
-          content: m.content
-        }))
-      })
-    })
-
-    const data = await response.json()
-
-    const assistantMessage: Message = {
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: data.message
+    const userMessage: Message = {
+      id: Date.now(),
+      role: 'user',
+      content: input
     }
 
-    const finalMessages = [...updatedMessages, assistantMessage]
-    setMessages(finalMessages)
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
+    setInput('')
+    setLoading(true)
 
-    // Save to database
-    const title = userMessage.content.slice(0, 50)
-    const dbMessages = finalMessages.map(m => ({
-      role: m.role,
-      content: m.content
-    }))
-
-    if (!conversationId) {
-      // Create new conversation
-      const saveResponse = await fetch('/api/conversations', {
+    try {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title,
-          model: selectedModel.name,
-          messages: dbMessages
+          messages: updatedMessages.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
         })
       })
-      const saveData = await saveResponse.json()
-      console.log('Save response:', saveData)
-      if (saveData.conversation?.id) {
-        setConversationId(saveData.conversation.id)
-      }
-    } else {
-      // Update existing conversation
-      await fetch('/api/conversations', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: conversationId,
-          messages: dbMessages,
-          title
-        })
-      })
-    }
 
-  } catch (error) {
-    console.error('Error:', error)
-  } finally {
-    setLoading(false)
+      const data = await response.json()
+
+      const assistantMessage: Message = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.message
+      }
+
+      const finalMessages = [...updatedMessages, assistantMessage]
+      setMessages(finalMessages)
+
+      const title = userMessage.content.slice(0, 50)
+      const dbMessages = finalMessages.map(m => ({
+        role: m.role,
+        content: m.content
+      }))
+
+      if (!conversationId) {
+        const saveResponse = await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            model: selectedModel.name,
+            messages: dbMessages
+          })
+        })
+        const saveData = await saveResponse.json()
+        if (saveData.conversation?.id) {
+          setConversationId(saveData.conversation.id)
+          onConversationSaved(saveData.conversation.id)
+        }
+      } else {
+        await fetch('/api/conversations', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: conversationId,
+            messages: dbMessages,
+            title
+          })
+        })
+      }
+
+    } catch (error) {
+      console.error('Error:', error)
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -129,7 +144,6 @@ export default function ChatArea() {
       height: '100vh',
       backgroundColor: '#0a0a0a'
     }}>
-
       {/* Top bar */}
       <div style={{
         display: 'flex',
@@ -140,7 +154,6 @@ export default function ChatArea() {
       }}>
         <span style={{ color: '#888', fontSize: '14px' }}>New Chat</span>
 
-        {/* Model selector */}
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setShowModelDropdown(!showModelDropdown)}
@@ -294,7 +307,6 @@ export default function ChatArea() {
 
         {loading && <TypingIndicator />}
         <div ref={messagesEndRef} />
-
       </div>
 
       {/* Input */}
@@ -345,7 +357,6 @@ export default function ChatArea() {
           Press Enter to send · Shift+Enter for new line
         </div>
       </div>
-
     </div>
   )
 }
