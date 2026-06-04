@@ -8,6 +8,7 @@ export default function Home() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [selectedConversation, setSelectedConversation] = useState<any>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [sidebarVisible, setSidebarVisible] = useState(true)
 
   const handleSelectConversation = (conversation: any) => {
     setActiveConversationId(conversation.id)
@@ -25,20 +26,21 @@ export default function Home() {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      height: '100vh',
-      backgroundColor: '#0a0a0a'
-    }}>
-      <Sidebar
-        onSelectConversation={handleSelectConversation}
-        onNewChat={handleNewChat}
-        activeConversationId={activeConversationId}
-        refreshTrigger={refreshTrigger}
-      />
+    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#0a0a0a' }}>
+      {sidebarVisible && (
+        <Sidebar
+          onSelectConversation={handleSelectConversation}
+          onNewChat={handleNewChat}
+          activeConversationId={activeConversationId}
+          refreshTrigger={refreshTrigger}
+          onToggleSidebar={() => setSidebarVisible(prev => !prev)}
+        />
+      )}
       <ChatArea
         selectedConversation={selectedConversation}
         onConversationSaved={handleConversationSaved}
+        sidebarVisible={sidebarVisible}
+        onToggleSidebar={() => setSidebarVisible(prev => !prev)}
       />
     </div>
   )
