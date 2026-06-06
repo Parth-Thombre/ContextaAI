@@ -28,17 +28,32 @@ interface SidebarProps {
 export default function Sidebar({ onSelectConversation, onNewChat, activeConversationId, refreshTrigger, onToggleSidebar }: SidebarProps) {
   const [activeProject, setActiveProject] = useState<number | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [logoHovered, setLogoHovered] = useState(false)
+  // const [logoHovered, setLogoHovered] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false)
 
   useEffect(() => { loadConversations() }, [refreshTrigger])
 
-  const loadConversations = async () => {
+  const loadConversations = async (q?: string) => {
     try {
-      const response = await fetch('/api/conversations')
+      setSearching(true)
+      const url = q ? `/api/conversations?q=${encodeURIComponent(q)}` : '/api/conversations'
+      const response = await fetch(url)
       const data = await response.json()
       setConversations(data.conversations || [])
     } catch (error) {
       console.error('Error loading conversations:', error)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value)
+    if (value.trim()) {
+      loadConversations(value)
+    } else {
+      loadConversations()
     }
   }
 
@@ -67,6 +82,36 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
         <Plus size={15} />
         New Chat
       </button>
+
+      {/* Search */}
+      <div style={{ position: 'relative', marginBottom: '12px' }}>
+        <input
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search conversations..."
+          style={{
+            width: '100%',
+            backgroundColor: '#1a1a1a',
+            border: '1px solid #2a2a2a',
+            borderRadius: '8px',
+            padding: '8px 12px 8px 32px',
+            color: '#ffffff',
+            fontSize: '13px',
+            outline: 'none',
+            boxSizing: 'border-box'
+          }}
+        />
+        <svg
+          style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#555' }}
+          width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        {searching && (
+          <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#555', fontSize: '11px' }}>...</div>
+        )}
+      </div>
 
       {/* Projects */}
       <div style={{ fontSize: '11px', color: '#444', textTransform: 'uppercase', letterSpacing: '1px', padding: '4px 4px', marginBottom: '2px' }}>Projects</div>
