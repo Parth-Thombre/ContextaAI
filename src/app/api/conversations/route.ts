@@ -1,18 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '../../../lib/supabase'
 
-// GET - load all conversations
-export async function GET() {
+// GET - load all conversations (supports ?q=searchterm)
+export async function GET(request: NextRequest) {
   try {
-    const { data, error } = await supabase
+    const { searchParams } = new URL(request.url)
+    const q = searchParams.get('q')?.trim()
+
+    let query = supabase
       .from('conversations')
       .select('*')
       .order('updated_at', { ascending: false })
 
+    if (q) {
+      query = query.ilike('title', `%${q}%`)
+    }
+
+    const { data, error } = await query
     if (error) throw error
 
-    return NextResponse.json({ conversations: data })
+    // Also search message content if q is provided
+    if (q && data) {
+      const titleMatches = data
+      
+      // Get ALL conversations to search message content too
+      const { data: allData } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('updated_at', { ascending: false })
 
+      const contentMatches = (allData || []).filter(conv => {
+        const messages = conv.messages as any[]
+        return messages?.some(m =>
+          m.content?.toLowerCase().includes(q.toLowerCase())
+        )
+      })
+
+      // Merge and deduplicate
+      const merged = [...titleMatches]
+      contentMatches.forEach(c => {
+        if (!merged.find(m => m.id === c.id)) merged.push(c)
+      })
+
+      return NextResponse.json({ conversations: merged })
+    }
+
+    return NextResponse.json({ conversations: data })
   } catch (error) {
     console.error('Error loading conversations:', error)
     return NextResponse.json(
@@ -66,6 +99,26 @@ export async function PATCH(request: NextRequest) {
     console.error('Error updating conversation:', error)
     return NextResponse.json(
       { error: 'Failed to update conversation' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - delete a conversation
+export async function DELETE(request: NextRequest) {
+  try {
+    const { id } = await request.json()
+    const { error } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting conversation:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete conversation' },
       { status: 500 }
     )
   }

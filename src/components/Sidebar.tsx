@@ -28,17 +28,47 @@ interface SidebarProps {
 export default function Sidebar({ onSelectConversation, onNewChat, activeConversationId, refreshTrigger, onToggleSidebar }: SidebarProps) {
   const [activeProject, setActiveProject] = useState<number | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [logoHovered, setLogoHovered] = useState(false)
+  // const [logoHovered, setLogoHovered] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
 
   useEffect(() => { loadConversations() }, [refreshTrigger])
 
-  const loadConversations = async () => {
+  const loadConversations = async (q?: string) => {
     try {
-      const response = await fetch('/api/conversations')
+      setSearching(true)
+      const url = q ? `/api/conversations?q=${encodeURIComponent(q)}` : '/api/conversations'
+      const response = await fetch(url)
       const data = await response.json()
       setConversations(data.conversations || [])
     } catch (error) {
       console.error('Error loading conversations:', error)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value)
+    if (value.trim()) {
+      loadConversations(value)
+    } else {
+      loadConversations()
+    }
+  }
+
+  const deleteConversation = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation() // prevent opening the chat
+    try {
+      await fetch('/api/conversations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+      setConversations(prev => prev.filter(c => c.id !== id))
+    } catch (error) {
+      console.error('Error deleting:', error)
     }
   }
 
@@ -68,6 +98,36 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
         New Chat
       </button>
 
+      {/* Search */}
+      <div style={{ position: 'relative', marginBottom: '12px' }}>
+        <input
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search conversations..."
+          style={{
+            width: '100%',
+            backgroundColor: '#1a1a1a',
+            border: '1px solid #2a2a2a',
+            borderRadius: '8px',
+            padding: '8px 12px 8px 32px',
+            color: '#ffffff',
+            fontSize: '13px',
+            outline: 'none',
+            boxSizing: 'border-box'
+          }}
+        />
+        <svg
+          style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#555' }}
+          width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        {searching && (
+          <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#555', fontSize: '11px' }}>...</div>
+        )}
+      </div>
+
       {/* Projects */}
       <div style={{ fontSize: '11px', color: '#444', textTransform: 'uppercase', letterSpacing: '1px', padding: '4px 4px', marginBottom: '2px' }}>Projects</div>
 
@@ -90,7 +150,7 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
         {conversations.length === 0 && (
           <div style={{ color: '#444', fontSize: '13px', padding: '6px 4px' }}>No conversations yet</div>
         )}
-        {conversations.map((conversation) => (
+        {/* {conversations.map((conversation) => (
           <button
             key={conversation.id}
             onClick={() => onSelectConversation(conversation)}
@@ -98,6 +158,36 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
           >
             {conversation.title}
           </button>
+        ))} */}
+        {conversations.map((conversation) => (
+          <div
+            key={conversation.id}
+            onMouseEnter={() => setHoveredId(conversation.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
+          >
+            <button
+              onClick={() => onSelectConversation(conversation)}
+              style={{ display: 'block', backgroundColor: activeConversationId === conversation.id ? '#1e1e1e' : 'transparent', color: activeConversationId === conversation.id ? '#ffffff' : '#777', border: 'none', borderRadius: '8px', padding: '8px 28px 8px 4px', cursor: 'pointer', fontSize: '13px', textAlign: 'left', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {conversation.title}
+            </button>
+
+            {hoveredId === conversation.id && (
+              <button
+                onClick={(e) => deleteConversation(e, conversation.id)}
+                style={{ position: 'absolute', right: '4px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#555', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4h6v2" />
+                </svg>
+              </button>
+            )}
+          </div>
         ))}
       </div>
     </div>
