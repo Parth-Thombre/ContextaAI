@@ -103,3 +103,23 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
+
+// DELETE - delete a conversation
+export async function DELETE(request: NextRequest) {
+  try {
+    const { id } = await request.json()
+    const { error } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting conversation:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete conversation' },
+      { status: 500 }
+    )
+  }
+}

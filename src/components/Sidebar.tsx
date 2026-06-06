@@ -31,6 +31,7 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
   // const [logoHovered, setLogoHovered] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
 
   useEffect(() => { loadConversations() }, [refreshTrigger])
 
@@ -54,6 +55,20 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
       loadConversations(value)
     } else {
       loadConversations()
+    }
+  }
+
+  const deleteConversation = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation() // prevent opening the chat
+    try {
+      await fetch('/api/conversations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+      setConversations(prev => prev.filter(c => c.id !== id))
+    } catch (error) {
+      console.error('Error deleting:', error)
     }
   }
 
@@ -135,7 +150,7 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
         {conversations.length === 0 && (
           <div style={{ color: '#444', fontSize: '13px', padding: '6px 4px' }}>No conversations yet</div>
         )}
-        {conversations.map((conversation) => (
+        {/* {conversations.map((conversation) => (
           <button
             key={conversation.id}
             onClick={() => onSelectConversation(conversation)}
@@ -143,6 +158,36 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
           >
             {conversation.title}
           </button>
+        ))} */}
+        {conversations.map((conversation) => (
+          <div
+            key={conversation.id}
+            onMouseEnter={() => setHoveredId(conversation.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
+          >
+            <button
+              onClick={() => onSelectConversation(conversation)}
+              style={{ display: 'block', backgroundColor: activeConversationId === conversation.id ? '#1e1e1e' : 'transparent', color: activeConversationId === conversation.id ? '#ffffff' : '#777', border: 'none', borderRadius: '8px', padding: '8px 28px 8px 4px', cursor: 'pointer', fontSize: '13px', textAlign: 'left', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {conversation.title}
+            </button>
+
+            {hoveredId === conversation.id && (
+              <button
+                onClick={(e) => deleteConversation(e, conversation.id)}
+                style={{ position: 'absolute', right: '4px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#555', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4h6v2" />
+                </svg>
+              </button>
+            )}
+          </div>
         ))}
       </div>
     </div>
