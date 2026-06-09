@@ -23,9 +23,12 @@ interface SidebarProps {
   activeConversationId: string | null
   refreshTrigger: number
   onToggleSidebar: () => void
+  user: any
+  isGuest: boolean
+  onLogout: () => void
 }
 
-export default function Sidebar({ onSelectConversation, onNewChat, activeConversationId, refreshTrigger, onToggleSidebar }: SidebarProps) {
+export default function Sidebar({ onSelectConversation, onNewChat, activeConversationId, refreshTrigger, onToggleSidebar, user, isGuest, onLogout }: SidebarProps) {
   const [activeProject, setActiveProject] = useState<number | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
   // const [logoHovered, setLogoHovered] = useState(false)
@@ -33,12 +36,23 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
   const [searching, setSearching] = useState(false)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
 
-  useEffect(() => { loadConversations() }, [refreshTrigger])
+  useEffect(() => { loadConversations() }, [refreshTrigger, user, isGuest])
 
   const loadConversations = async (q?: string) => {
     try {
       setSearching(true)
-      const url = q ? `/api/conversations?q=${encodeURIComponent(q)}` : '/api/conversations'
+
+      // Guests see no saved chats
+      if (isGuest) {
+        setConversations([])
+        setSearching(false)
+        return
+      }
+
+      const params = new URLSearchParams()
+      if (user?.id) params.set('user_id', user.id)
+      if (q) params.set('q', q)
+      const url = `/api/conversations?${params.toString()}`
       const response = await fetch(url)
       const data = await response.json()
       setConversations(data.conversations || [])
@@ -189,6 +203,20 @@ export default function Sidebar({ onSelectConversation, onNewChat, activeConvers
             )}
           </div>
         ))}
+      </div>
+      {/* User / Guest footer */}
+      <div style={{ borderTop: '1px solid #1e1e1e', paddingTop: '12px', marginTop: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '12px', color: '#444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {user ? user.email : '👤 Guest'}
+          </div>
+          <button
+            onClick={onLogout}
+            style={{ background: 'transparent', border: 'none', color: '#444', fontSize: '12px', cursor: 'pointer', flexShrink: 0 }}
+          >
+            {user ? 'Log out' : 'Sign up'}
+          </button>
+        </div>
       </div>
     </div>
   )

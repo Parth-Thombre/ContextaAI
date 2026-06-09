@@ -25,9 +25,11 @@ interface ChatAreaProps {
   onConversationSaved: (id: string) => void
   sidebarVisible: boolean
   onToggleSidebar: () => void
+  user: any
+  isGuest: boolean
 }
 
-export default function ChatArea({ selectedConversation, onConversationSaved, sidebarVisible, onToggleSidebar }: ChatAreaProps) {
+export default function ChatArea({ selectedConversation, onConversationSaved, sidebarVisible, onToggleSidebar, user, isGuest }: ChatAreaProps) {
   const [selectedModel, setSelectedModel] = useState(models[0])
   const [showModelDropdown, setShowModelDropdown] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -44,13 +46,14 @@ export default function ChatArea({ selectedConversation, onConversationSaved, si
 
   useEffect(() => {
     if (selectedConversation) {
-      setConversationId(selectedConversation.id)
-      setMessages(selectedConversation.messages.map((m: any, i: number) => ({
+        setConversationId(selectedConversation.id)
+        setMessages(selectedConversation.messages.map((m: any, i: number) => ({
         id: i, role: m.role, content: m.content
-      })))
+        })))
     } else {
-      setConversationId(null)
-      setMessages([])
+        setConversationId(null)
+        setMessages([])
+        setInput('')
     }
   }, [selectedConversation])
 
@@ -61,28 +64,115 @@ export default function ChatArea({ selectedConversation, onConversationSaved, si
     ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'
   }, [input])
 
+//   const sendMessage = async () => {
+//     if (!input.trim() || loading) return
+
+//     const userMessage: Message = { id: Date.now(), role: 'user', content: input }
+//     const updatedMessages = [...messages, userMessage]
+//     setMessages(updatedMessages)
+//     setInput('')
+//     setLoading(true)
+
+//     if (isGuest) {
+//     const stored = localStorage.getItem('guest_usage')
+//     const usage = stored ? JSON.parse(stored) : { tokens: 0, resetAt: Date.now() + 5 * 60 * 60 * 1000 }
+//     if (Date.now() > usage.resetAt) {
+//         usage.tokens = 0
+//         usage.resetAt = Date.now() + 5 * 60 * 60 * 1000
+//     }
+//     const estimatedTokens = input.length / 4 // rough estimate
+//     if (usage.tokens >= 10000) {
+//         alert('You\'ve used your free tokens. Sign up for unlimited access — it\'s free!')
+//         return
+//     }
+//     usage.tokens += estimatedTokens + 500 // input + estimated response
+//     localStorage.setItem('guest_usage', JSON.stringify(usage))
+//     }
+
+//     try {
+//       const response = await fetch('/api/chat', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({
+//           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+//           model: selectedModel.id
+//         })
+//       })
+//       const data = await response.json()
+//       const assistantMessage: Message = { id: Date.now() + 1, role: 'assistant', content: data.message }
+//       const finalMessages = [...updatedMessages, assistantMessage]
+//       setMessages(finalMessages)
+
+//       const title = userMessage.content.slice(0, 50)
+//       const dbMessages = finalMessages.map(m => ({ role: m.role, content: m.content }))
+
+//       if (!conversationId) {
+//         const saveResponse = await fetch('/api/conversations', {
+//           method: 'POST',
+//           headers: { 'Content-Type': 'application/json' },
+//           body: JSON.stringify({ title, model: selectedModel.name, messages: dbMessages, user_id: user?.id || null })
+//         })
+//         const saveData = await saveResponse.json()
+//         if (saveData.conversation?.id) {
+//           setConversationId(saveData.conversation.id)
+//           onConversationSaved(saveData.conversation.id)
+//         }
+//       } else {
+//         await fetch('/api/conversations', {
+//           method: 'PATCH',
+//           headers: { 'Content-Type': 'application/json' },
+//           body: JSON.stringify({ id: conversationId, messages: dbMessages, title })
+//         })
+//       }
+//     } catch (error) {
+//       console.error('Error:', error)
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
   const sendMessage = async () => {
-    if (!input.trim() || loading) return
-    const userMessage: Message = { id: Date.now(), role: 'user', content: input }
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
-    setInput('')
-    setLoading(true)
+  if (!input.trim() || loading) return
 
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
-          model: selectedModel.id
-        })
+  // Guest token limit check — must be before anything else
+  if (isGuest) {
+    const stored = localStorage.getItem('guest_usage')
+    const usage = stored ? JSON.parse(stored) : { tokens: 0, resetAt: Date.now() + 5 * 60 * 60 * 1000 }
+    if (Date.now() > usage.resetAt) {
+      usage.tokens = 0
+      usage.resetAt = Date.now() + 5 * 60 * 60 * 1000
+    }
+    if (usage.tokens >= 10000) {
+      alert('You\'ve used your free tokens. Sign up for unlimited access — it\'s free!')
+      return
+    }
+    const estimatedTokens = input.length / 4
+    usage.tokens += estimatedTokens + 500
+    localStorage.setItem('guest_usage', JSON.stringify(usage))
+  }
+
+  const userMessage: Message = { id: Date.now(), role: 'user', content: input }
+  const updatedMessages = [...messages, userMessage]
+  setMessages(updatedMessages)
+  setInput('')
+  setLoading(true)
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+        model: selectedModel.id
       })
-      const data = await response.json()
-      const assistantMessage: Message = { id: Date.now() + 1, role: 'assistant', content: data.message }
-      const finalMessages = [...updatedMessages, assistantMessage]
-      setMessages(finalMessages)
+    })
+    const data = await response.json()
+    const assistantMessage: Message = { id: Date.now() + 1, role: 'assistant', content: data.message }
+    const finalMessages = [...updatedMessages, assistantMessage]
+    setMessages(finalMessages)
 
+    // Only save to DB if logged in user
+    // console.log('Saving chat, user:', user)
+    if (user?.id) {
       const title = userMessage.content.slice(0, 50)
       const dbMessages = finalMessages.map(m => ({ role: m.role, content: m.content }))
 
@@ -90,7 +180,7 @@ export default function ChatArea({ selectedConversation, onConversationSaved, si
         const saveResponse = await fetch('/api/conversations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, model: selectedModel.name, messages: dbMessages })
+          body: JSON.stringify({ title, model: selectedModel.name, messages: dbMessages, user_id: user.id })
         })
         const saveData = await saveResponse.json()
         if (saveData.conversation?.id) {
@@ -104,12 +194,13 @@ export default function ChatArea({ selectedConversation, onConversationSaved, si
           body: JSON.stringify({ id: conversationId, messages: dbMessages, title })
         })
       }
-    } catch (error) {
-      console.error('Error:', error)
-    } finally {
-      setLoading(false)
     }
+  } catch (error) {
+    console.error('Error:', error)
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -211,6 +302,22 @@ export default function ChatArea({ selectedConversation, onConversationSaved, si
       <div style={{ padding: '12px 24px 24px', display: 'flex', justifyContent: 'center' }}>
         <div style={{ width: '100%', maxWidth: '700px' }}>
           <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '16px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+            {/* Guest token indicator */}
+            {isGuest && (() => {
+            const stored = typeof window !== 'undefined' ? localStorage.getItem('guest_usage') : null
+            const usage = stored ? JSON.parse(stored) : { tokens: 0 }
+            const remaining = Math.max(0, 10000 - (usage.tokens || 0))
+            const percent = (remaining / 10000) * 100
+            return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <div style={{ flex: 1, height: '2px', backgroundColor: '#2a2a2a', borderRadius: '2px' }}>
+                    <div style={{ width: `${percent}%`, height: '100%', backgroundColor: percent > 30 ? '#6c47ff' : '#ff4444', borderRadius: '2px', transition: 'width 0.3s' }} />
+                </div>
+                <div style={{ fontSize: '11px', color: '#444', flexShrink: 0 }}>{Math.round(remaining / 100)} credits left</div>
+                </div>
+            )
+            })()}
 
             {/* Textarea */}
             <textarea

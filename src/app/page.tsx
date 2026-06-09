@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Sidebar from '../components/Sidebar'
 import ChatArea from '../components/ChatArea'
+import AuthPage from '../components/AuthPage'
+import { supabase } from '../lib/supabase'
 
 export default function Home() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
@@ -11,6 +13,24 @@ export default function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [sidebarVisible, setSidebarVisible] = useState(true)
   const [logoHovered, setLogoHovered] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [isGuest, setIsGuest] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    // Check if already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setAuthLoading(false)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const handleSelectConversation = (conversation: any) => {
     setActiveConversationId(conversation.id)
@@ -27,10 +47,26 @@ export default function Home() {
     setRefreshTrigger(prev => prev + 1)
   }
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setIsGuest(false)
+    setUser(null)
+  }
+
+  if (authLoading) {
+    return (
+      <div style={{ height: '100vh', backgroundColor: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#333', fontSize: '14px' }}>Loading...</div>
+      </div>
+    )
+  }
+
+  if (!user && !isGuest) {
+    return <AuthPage onGuestContinue={() => setIsGuest(true)} />
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: '#0a0a0a' }}>
-
-      {/* Sidebar */}
       {sidebarVisible && (
         <Sidebar
           onSelectConversation={handleSelectConversation}
@@ -38,10 +74,12 @@ export default function Home() {
           activeConversationId={activeConversationId}
           refreshTrigger={refreshTrigger}
           onToggleSidebar={() => setSidebarVisible(false)}
+          user={user}
+          isGuest={isGuest}
+          onLogout={handleLogout}
         />
       )}
 
-      {/* Mini rail when sidebar is hidden */}
       {!sidebarVisible && (
         <div style={{ width: '52px', height: '100vh', backgroundColor: '#111111', borderRight: '1px solid #1e1e1e', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '14px' }}>
           <button
@@ -56,25 +94,20 @@ export default function Home() {
                 <line x1="9" y1="3" x2="9" y2="21" />
               </svg>
             ) : (
-              // <Image src="/logo.png" alt="ContextaAI" width={36} height={36} style={{ borderRadius: '8px' }} />
-              <Image
-                src="/logo.png"
-                alt="ContextaAI"
-                width={72}
-                height={72}
-                quality={100}
-                style={{ borderRadius: '8px', width: '36px', height: '36px' }}
-              />
+              <Image src="/logo.png" alt="ContextaAI" width={72} height={72} quality={100} style={{ borderRadius: '6px', width: '36px', height: '36px' }} />
             )}
           </button>
         </div>
       )}
 
       <ChatArea
+        key={activeConversationId ?? 'new'}
         selectedConversation={selectedConversation}
         onConversationSaved={handleConversationSaved}
         sidebarVisible={sidebarVisible}
         onToggleSidebar={() => setSidebarVisible(prev => !prev)}
+        user={user}
+        isGuest={isGuest}
       />
     </div>
   )
