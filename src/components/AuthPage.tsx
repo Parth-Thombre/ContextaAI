@@ -42,7 +42,7 @@ export default function AuthPage({ onGuestContinue }: AuthPageProps) {
 
         {/* Logo + Name */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '40px', gap: '16px' }}>
-          <Image src="/logo.png" alt="ContextaAI" width={240} height={240} quality={100} style={{ width: '72px', height: '72px', borderRadius: '16px' }} />
+          <Image src="/logo.png" alt="ContextaAI" width={240} height={240} quality={100} style={{ width: '72px', height: 'auto', borderRadius: '16px' }} priority />
           <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff' }}>ContextaAI</div>
           <div style={{ fontSize: '14px', color: '#555', textAlign: 'center' }}>One memory for every AI.</div>
         </div>

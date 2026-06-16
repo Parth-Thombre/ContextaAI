@@ -25,8 +25,15 @@ export default function Home() {
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+        // Stale/expired token — clean logout
+        supabase.auth.signOut()
+        setUser(null)
+        setIsGuest(false)
+      } else {
+        setUser(session?.user ?? null)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -94,7 +101,7 @@ export default function Home() {
                 <line x1="9" y1="3" x2="9" y2="21" />
               </svg>
             ) : (
-              <Image src="/logo.png" alt="ContextaAI" width={72} height={72} quality={100} style={{ borderRadius: '6px', width: '36px', height: '36px' }} />
+              <Image src="/logo.png" alt="ContextaAI" width={36} height={36} quality={100} style={{ borderRadius: '6px' }} />
             )}
           </button>
         </div>
