@@ -25,8 +25,15 @@ export default function Home() {
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+        // Stale/expired token — clean logout
+        supabase.auth.signOut()
+        setUser(null)
+        setIsGuest(false)
+      } else {
+        setUser(session?.user ?? null)
+      }
     })
 
     return () => subscription.unsubscribe()
